@@ -171,3 +171,31 @@ def test_generate_multiple_runs(tmp_path):
         assert audio.shape[0] == 1  # Mono channel
         assert audio.shape[1] > 0  # Has audio samples
         assert sample_rate == 24000
+
+
+def test_generate_with_pause_tag(tmp_path):
+    """Test generate command with pause tag in text."""
+    output_file = tmp_path / "pause_test.wav"
+
+    result = runner.invoke(
+        cli_app,
+        ["generate", "--text", "Hello. [pause:500ms] World.", "--output-path", str(output_file)],
+    )
+
+    assert result.exit_code == 0
+    assert output_file.exists()
+
+    audio, sample_rate = audio_read(str(output_file))
+    assert audio.shape[0] == 1
+    assert audio.shape[1] > 0
+    assert sample_rate == 24000
+
+    # With 500ms pause, audio should be at least 500ms longer than without
+    result = runner.invoke(
+        cli_app,
+        ["generate", "--text", "Hello. World.", "--output-path", str(tmp_path / "no_pause.wav")],
+    )
+
+    assert result.exit_code == 0
+    audio_no_pause, _ = audio_read(str(tmp_path / "no_pause.wav"))
+    assert audio.shape[1] > audio_no_pause.shape[1] + sample_rate * 0.4

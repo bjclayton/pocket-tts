@@ -157,3 +157,22 @@ def test_batch_processing():
     # Concatenate all audio
     full_audio = torch.cat(audios, dim=0)
     scipy.io.wavfile.write("batch_output.wav", model.sample_rate, full_audio.numpy())
+
+
+def test_generate_audio_with_pauses():
+    import scipy.io.wavfile
+
+    from pocket_tts import TTSModel
+
+    model = TTSModel.load_model()
+    voice_state = model.get_state_for_audio_prompt("alba")
+
+    # Should produce longer audio than without pause
+    audio_no_pause = model.generate_audio(voice_state, "Hello world.")
+    audio_with_pause = model.generate_audio_with_pauses(voice_state, "Hello [pause:1s] world.")
+
+    # With 1s pause, audio should be at least 1 second longer
+    diff = audio_with_pause.shape[0] - audio_no_pause.shape[0]
+    assert diff >= model.sample_rate * 0.9
+
+    scipy.io.wavfile.write("pause_output.wav", model.sample_rate, audio_with_pause.numpy())

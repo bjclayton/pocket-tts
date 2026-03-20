@@ -253,15 +253,26 @@ def generate(
         tts_model.to(device)
 
         model_state_for_voice = tts_model.get_state_for_audio_prompt(voice)
-        # Stream audio generation directly to file or stdout
-        audio_chunks = tts_model.generate_audio_stream(
-            model_state=model_state_for_voice,
-            text_to_generate=text,
-            frames_after_eos=frames_after_eos,
-            max_tokens=max_tokens,
-        )
 
-        stream_audio_chunks(output_path, audio_chunks, tts_model.config.mimi.sample_rate)
+        if "[pause" in text:
+            # Pause tags detected — generate full audio with silence stitching
+            audio = tts_model.generate_audio_with_pauses(
+                model_state=model_state_for_voice, text_to_generate=text
+            )
+            # stream_audio_chunks expects an iterable of chunks
+            stream_audio_chunks(
+                output_path, iter([audio.unsqueeze(0)]), tts_model.config.mimi.sample_rate
+            )
+        else:
+            # Stream audio generation directly to file or stdout
+            audio_chunks = tts_model.generate_audio_stream(
+                model_state=model_state_for_voice,
+                text_to_generate=text,
+                frames_after_eos=frames_after_eos,
+                max_tokens=max_tokens,
+            )
+
+            stream_audio_chunks(output_path, audio_chunks, tts_model.config.mimi.sample_rate)
 
         # Only print the result message if not writing to stdout
         if output_path != "-":

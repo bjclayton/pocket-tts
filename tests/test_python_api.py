@@ -18,6 +18,7 @@ def test_public_api_expected_methods_and_properties():
         "load_model",
         "generate_audio",
         "generate_audio_stream",
+        "generate_audio_with_pauses",
         "get_state_for_audio_prompt",
     ):
         assert callable(getattr(TTSModel, method_name))

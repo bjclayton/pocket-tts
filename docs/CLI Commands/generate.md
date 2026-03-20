@@ -12,6 +12,28 @@ pocket-tts generate
 
 This will generate a WAV file `./tts_output.wav` with the default text and voice.
 
+### Pauses
+
+Add silence between words or sentences using `[pause]` tags:
+
+```bash
+# Default 500ms pause
+pocket-tts generate --text "Hello. [pause] How are you?"
+
+# Pause in seconds
+pocket-tts generate --text "Welcome. [pause:1.5s] Please hold."
+
+# Pause in milliseconds
+pocket-tts generate --text "Ready? [pause:500ms] Go!"
+```
+
+Supported formats:
+
+- `[pause]` — 500ms default
+- `[pause:Xs]` — X seconds (e.g. `[pause:2s]`)
+- `[pause:Xms]` — X milliseconds (e.g. `[pause:300ms]`)
+- `[pause:X]` — X seconds, no unit needed (e.g. `[pause:2]`)
+
 ## Command Options
 
 ### Core Options

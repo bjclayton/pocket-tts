@@ -456,6 +456,54 @@ class TTSModel(nn.Module):
         return torch.cat(audio_chunks, dim=0)
 
     @torch.no_grad
+    def generate_audio_with_pauses(
+        self, model_state: dict, text_to_generate: str, copy_state: bool = True
+    ) -> torch.Tensor:
+        """Generate audio from text containing [pause:Xs] tags.
+
+        Pauses are inserted as PCM silence between generated segments.
+
+        Supported tag formats:
+            [pause]        -> 500ms default
+            [pause:1.5s]   -> 1500ms
+            [pause:500ms]  -> 500ms
+            [pause:2]      -> 2000ms (bare number = seconds)
+
+        Args:
+            model_state: from get_state_for_audio_prompt()
+            text_to_generate: text with optional [pause:Xs] tags
+            copy_state: whether to deep copy state before generation
+
+        Returns:
+            torch.Tensor: 1D PCM audio tensor at self.sample_rate
+        """
+        from pocket_tts.utils.pause_parser import parse_pause_tags
+
+        segments = parse_pause_tags(text_to_generate)
+
+        # Fast path, no pause tags found
+        if not any(s.is_pause for s in segments):
+            return self.generate_audio(
+                model_state=model_state, text_to_generate=text_to_generate, copy_state=copy_state
+            )
+
+        audio_parts: list[torch.Tensor] = []
+
+        for segment in segments:
+            if segment.is_pause:
+                n_samples = int(segment.duration_seconds * self.sample_rate)
+                audio_parts.append(torch.zeros(n_samples))
+            else:
+                if not segment.text:
+                    continue
+                audio = self.generate_audio(
+                    model_state=model_state, text_to_generate=segment.text, copy_state=copy_state
+                )
+                audio_parts.append(audio)
+
+        return torch.cat(audio_parts, dim=0)
+
+    @torch.no_grad
     def generate_audio_stream(
         self,
         model_state: dict,
